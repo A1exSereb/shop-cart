@@ -19,16 +19,121 @@ const btnCart = document.querySelector('.button-cart'),
 			cartTableGoods = document.querySelector('.cart-table__goods'),
 			cartTableTotal = document.querySelector('.card-table__total'),
 			cartCount = document.querySelector('.cart-count');
+
+
+class CartModel {
+	
+	constructor(){
+		this.cartGoods = []
+		this.handlers = []
+	}
+	
+	deleteGood(id){
+		this.cartGoods = this.cartGoods.filter(item =>id !== item.id);
+	}
+	
+	minusGood(id){
+		for(const item of this.cartGoods){
+			if(item.id === id){
+				item.count--;
+				if(item.count === 0){
+					this.deleteGood(id);
+				}
+				break;
+			}
+		}
+	}
+	
+	plusGood(id){
+		for(const item of this.cartGoods){
+			if(item.id === id){
+				item.count++;
+				break;
+			}
+		}
+	}
+	
+	addCartGoods(id){
+		const goodItem = this.cartGoods.find(item => item.id ===id);
+		if(goodItem){
+			this.plusGood(id);
+		} else{
+			getGoods()
+				.then(data => data.find(item => item.id === id))
+				.then(({id, name, price}) =>{
+					this.cartGoods.push({
+						id,
+						name,
+						price,
+						count: 1,
+					});
+				});
+		}
+	}
+	
+	_notify(){
+		this.handlers.forEach(h => h(this.cartGoods))
+	}
+	
+	subscribe(handler){
+		this.handlers.push(handler)
+	}
+}
+
+
+class CardView {
+	constructor(tableNode, totalNode){
+		this.tableNode = tableNode
+		this.totalNode = totalNode
+	}
+	
+	update(goods){
+		this.tableNode.textContent ='';
+		goods.forEach(({id, name, price, count})=>{
+			const trGood = document.createElement('tr');
+			trGood.className = 'cart-item';
+			trGood.dataset.id = id;
+
+			trGood.innerHTML = `
+			<td>${name}</td>
+			<td>${price}$</td>
+			<td><button class="cart-btn-minus">-</button></td>
+			<td>${count}</td>
+			<td><button class="cart-btn-plus">+</button></td>
+			<td>${count * price}$</td>
+			<td><button class="cart-btn-delete">x</button></td>
+			`;
+			this.tableNode.append(trGood);
+		});
+
+		const totalPrice = goods.reduce((sum ,item )=>{
+			return sum + item.price * item.count;
+		}, 0);
+
+		this.totalNode.textContent = totalPrice + '$';
+	}
+}
+
+class CardController {
+	constructor(model, view){
+		model.subscribe(view.update)
+		view.update(model.cartGoods)
+	}
+}
+
 //cart 
 const cart = {
 	cartGoods :[],
 	get count() {
-    if (this.cartGoods.length === 0) {
-      cartCount.textContent = '0';
-    }else{
-    cartCount.textContent = [this.cartGoods.length + 1];}
-		return cartCount;
-  },
+        if (this.cartGoods.length === 0) {
+          cartCount.textContent = '0';
+        }
+        else {
+            cartCount.textContent = [this.cartGoods.length + 1];
+        }
+
+        return cartCount;
+	},
 	renderCart(){
 		cartTableGoods.textContent ='';
 		this.cartGoods.forEach(({id, name, price, count})=>{
@@ -46,7 +151,6 @@ const cart = {
 			<td><button class="cart-btn-delete">x</button></td>
 			`;
 			cartTableGoods.append(trGood);
-			
 		});
 
 		const totalPrice = this.cartGoods.reduce((sum ,item )=>{
@@ -54,48 +158,6 @@ const cart = {
 		}, 0);
 
 		cartTableTotal.textContent = totalPrice + '$';
-	},
-	deleteGood(id){
-		this.cartGoods = this.cartGoods.filter(item =>id !== item.id);
-		this.count();
-	},
-	minusGood(id){
-		for(const item of this.cartGoods){
-			if(item.id === id){
-				item.count--;
-				if(item.count === 0){
-					this.deleteGood(id);
-				}
-				break;
-			}
-		}
-		this.count();
-	},
-	plusGood(id){
-		for(const item of this.cartGoods){
-			if(item.id === id){
-				item.count++;
-				break;
-			}
-		}
-		this.renderCart();
-	},
-	addCartGoods(id){
-		const goodItem = this.cartGoods.find(item => item.id ===id);
-		if(goodItem){
-			this.plusGood(id);
-		}else{
-			getGoods()
-				.then(data => data.find(item => item.id === id))
-					.then(({id, name, price}) =>{
-						this.cartGoods.push({
-							id,
-							name,
-							price,
-							count: 1,
-						});
-					});
-		}
 	},
 };
 
