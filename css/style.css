@@ -426,6 +426,16 @@ button {
   margin-left: auto;
   height: 40px;
 }
+.cart-clear {
+  position: absolute;
+  top: 20px;
+  right: 265px;
+  background-color: red;
+  border-color: red;
+  display: block;
+  margin-left: auto;
+  height: 40px;
+}
 
 .mw-160 {
   max-width: 160px;
