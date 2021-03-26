@@ -18,129 +18,17 @@ const btnCart = document.querySelector('.button-cart'),
 			longGoodsList = document.querySelector('.long-goods-list'),
 			cartTableGoods = document.querySelector('.cart-table__goods'),
 			cartTableTotal = document.querySelector('.card-table__total'),
-			cartCount = document.querySelector('.cart-count');
-
-
-class CartModel {
-	
-	constructor(){
-		this.cartGoods = []
-		this.handlers = []
-	}
-	
-	deleteGood(id){
-		this.cartGoods = this.cartGoods.filter(item =>id !== item.id);
-	}
-	
-	minusGood(id){
-		for(const item of this.cartGoods){
-			if(item.id === id){
-				item.count--;
-				if(item.count === 0){
-					this.deleteGood(id);
-				}
-				break;
-			}
-		}
-	}
-	
-	plusGood(id){
-		for(const item of this.cartGoods){
-			if(item.id === id){
-				item.count++;
-				break;
-			}
-		}
-	}
-	
-	addCartGoods(id){
-		const goodItem = this.cartGoods.find(item => item.id ===id);
-		if(goodItem){
-			this.plusGood(id);
-		} else{
-			getGoods()
-				.then(data => data.find(item => item.id === id))
-				.then(({id, name, price}) =>{
-					this.cartGoods.push({
-						id,
-						name,
-						price,
-						count: 1,
-					});
-				});
-		}
-	}
-	
-	_notify(){
-		this.handlers.forEach(h => h(this.cartGoods))
-	}
-	
-	subscribe(handler){
-		this.handlers.push(handler)
-	}
-}
-
-
-class CardView {
-	constructor(tableNode, totalNode){
-		this.tableNode = tableNode
-		this.totalNode = totalNode
-	}
-	
-	update(goods){
-		this.tableNode.textContent ='';
-		goods.forEach(({id, name, price, count})=>{
-			const trGood = document.createElement('tr');
-			trGood.className = 'cart-item';
-			trGood.dataset.id = id;
-
-			trGood.innerHTML = `
-			<td>${name}</td>
-			<td>${price}$</td>
-			<td><button class="cart-btn-minus">-</button></td>
-			<td>${count}</td>
-			<td><button class="cart-btn-plus">+</button></td>
-			<td>${count * price}$</td>
-			<td><button class="cart-btn-delete">x</button></td>
-			`;
-			this.tableNode.append(trGood);
-		});
-
-		const totalPrice = goods.reduce((sum ,item )=>{
-			return sum + item.price * item.count;
-		}, 0);
-
-		this.totalNode.textContent = totalPrice + '$';
-	}
-}
-
-class CardController {
-	constructor(model, view){
-		model.subscribe(view.update)
-		view.update(model.cartGoods)
-	}
-}
-
+			cartCount = document.querySelector('.cart-count'),
+			clearCart = document.querySelector('.cart-clear');
 //cart 
 const cart = {
 	cartGoods :[],
-	get count() {
-        if (this.cartGoods.length === 0) {
-          cartCount.textContent = '0';
-        }
-        else {
-            cartCount.textContent = [this.cartGoods.length + 1];
-        }
-
-        return cartCount;
-	},
 	renderCart(){
 		cartTableGoods.textContent ='';
 		this.cartGoods.forEach(({id, name, price, count})=>{
 			const trGood = document.createElement('tr');
 			trGood.className = 'cart-item';
 			trGood.dataset.id = id;
-
 			trGood.innerHTML = `
 			<td>${name}</td>
 			<td>${price}$</td>
@@ -151,6 +39,7 @@ const cart = {
 			<td><button class="cart-btn-delete">x</button></td>
 			`;
 			cartTableGoods.append(trGood);
+			
 		});
 
 		const totalPrice = this.cartGoods.reduce((sum ,item )=>{
@@ -159,8 +48,66 @@ const cart = {
 
 		cartTableTotal.textContent = totalPrice + '$';
 	},
+	updateCart(){
+        
+		const totalPrice = cart.cartGoods.reduce((sum, item) =>{
+				return sum + item.count;
+		}, 0);
+		if(!totalPrice){
+				document.querySelector('.cart-count').innerHTML = "";
+		}
+		else{ document.querySelector('.cart-count').innerHTML = `${totalPrice}`;}
+},
+	deleteGood(id){
+		this.cartGoods = this.cartGoods.filter(item =>id !== item.id);
+		this.renderCart();
+	},
+	minusGood(id){
+		for(const item of this.cartGoods){
+			if(item.id === id){
+				item.count--;
+				if(item.count === 0){
+					this.deleteGood(id);
+				}
+				break;
+			}
+		}
+		this.renderCart();
+	},
+	plusGood(id){
+		for(const item of this.cartGoods){
+			if(item.id === id){
+				item.count++;
+				break;
+			}
+		}
+		this.renderCart();
+	},
+	addCartGoods(id){
+		const goodItem = this.cartGoods.find(item => item.id ===id);
+		if(goodItem){
+			this.plusGood(id);
+		}else{
+			getGoods()
+				.then(data => data.find(item => item.id === id))
+					.then(({id, name, price}) =>{
+						this.cartGoods.push({
+							id,
+							name,
+							price,
+							count: 1,
+						});
+					});
+		}
+	},
+	clear(){
+		this.cartGoods.length = 0;
+	},
 };
-
+document.body.addEventListener('click', function(){
+	// console.log(cart.cartGoods.length);
+	cart.updateCart();
+});
 //cart modal
 function openModal(){
 	modalCart.classList.add('show');
@@ -175,16 +122,20 @@ document.body.addEventListener('click', e =>{
 	const addToCart = e.target.closest('.add-to-cart');
 	if(addToCart){
 		cart.addCartGoods(addToCart.dataset.id);
-		cart.count();
-		alert(`Товар был добавлен в корзину `);
 	}
+});
+clearCart.addEventListener('click', (e)=>{
+	e.preventDefault();
+	while(cart.cartGoods.length>0){
+		cart.cartGoods.pop();
+	}
+	cart.renderCart();
 });
 cartTableGoods.addEventListener('click',e =>{
 	const target = e.target;
 	if(target.classList.contains('cart-btn-delete')){
 		const parent = target.closest('.cart-item');
 		cart.deleteGood(parent.dataset.id);
-		cart.count();
 	}
 	if(target.classList.contains('cart-btn-minus')){
 		const parent = target.closest('.cart-item');
@@ -202,7 +153,6 @@ overlayClose.addEventListener('click',(e)=>{
 		closeModal();
 	}
 });
-//cart count
 
 //scroll smoot("think about"... sorry)
 
@@ -313,4 +263,42 @@ btnPromo.forEach(btn =>{
 	});
 });
 
-// обеим кнопкам добавил класс promo и data-set
+//server
+const modalForm = document.querySelector('.modal-form');
+
+const postData = dataUser => fetch('server.php',{
+	method: 'POST',
+	body: dataUser,
+});
+
+
+modalForm.addEventListener('submit', e =>{
+	e.preventDefault();
+	
+	const formData = new FormData(modalForm);
+	formData.append('cart', JSON.stringify(cart.cartGoods));
+
+
+	if(cart.cartGoods.length != 0 && innerWho[0].value != '' &&innerWho[1].value != ''){
+		postData(formData)
+		.then(response =>{
+			if(!response.ok){
+				throw new Error(response.status);
+			}
+			alert('Ваш заказ успешно отправлен, с вами свяжутся в ближайшее время');
+		})
+			.catch(error =>{
+				alert('К сожалению произошла ошибка');
+				console.error(error);
+			})
+				.finally(() => {
+						closeModal();
+						modalForm.reset();
+						cart.clear();
+				});
+	}else{
+		alert('Заполните поля')
+	}
+});
+
+const innerWho = document.querySelectorAll('.modal-input');
